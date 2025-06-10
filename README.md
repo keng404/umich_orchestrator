@@ -40,12 +40,11 @@ These are custom script(s) based on an end-user's use-case
 
 ## umich_orchestrator.py TODO list
 
-- [ ] Add in code for data management (i.e. deletion and archiving of data)
+- [ ] Add in code for BaseSpace data management (i.e. deletion and archiving of data)
 - [ ] [OPTIONAL] Add bash_wrapper to run orchestrator script every 5/10 minutes
 - [X] Give instructions for setting up Cron job
 - [X] Build and push official docker image based-off of this [Dockerfile](https://github.com/keng404/umich_orchestrator/blob/main/Dockerfile)
-- [ ] [OPTIONAL] Add data management functionality to remove linked data or duplicate data?? 
-
+- [ ] 
 ## umich_orchestrator.py FAQs
 
 1) How do I generate an API key?
