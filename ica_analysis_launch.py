@@ -313,7 +313,6 @@ def list_project_data_by_time(api_key,project_id,timestamp_str,max_retries = 5):
         projectDataPagedList = requests.get(full_url, headers=headers)
         #totalRecords = projectAnalysisPagedList.json()['totalItemCount']
         response_code = projectDataPagedList.status_code
-        num_tries = 0
         if 'nextPageToken' in projectDataPagedList.json().keys():
             nextPageToken = projectDataPagedList.json()['nextPageToken']
             while remainingRecords > 0:
@@ -321,11 +320,9 @@ def list_project_data_by_time(api_key,project_id,timestamp_str,max_retries = 5):
                 full_url = api_base_url + endpoint  ############ create header
                 projectDataPagedList = requests.get(full_url, headers=headers)
                 response_code = projectDataPagedList.status_code
-                if response_code != 200 and num_tries < max_retries:
-                    num_tries += 1
-                elif response_code != 200 and num_tries >= max_retries:
-                    raise ValueError(f"Could not get data from this endpoint {full_url}\nRetry script or increase number of retries to this endpoint\n")
-                else:
+                if response_code == 200:
+                    num_tries = 0
+                    response_code = 400
                     for data in projectDataPagedList.json()['items']:
                         project_data_metadata.append(data)
                     page_number += 1
@@ -334,6 +331,10 @@ def list_project_data_by_time(api_key,project_id,timestamp_str,max_retries = 5):
                     remainingRecords = projectDataPagedList.json()['remainingRecords']
                     if page_number % 5 == 0:
                         logging_statement(f"PROJECT_METADATA_REMAINING_RECORDS: {remainingRecords}")
+                elif response_code != 200 and num_tries < max_retries:
+                    num_tries += 1
+                elif response_code != 200 and num_tries >= max_retries:
+                    raise ValueError(f"Could not get data from this endpoint {full_url}\nRetry script or increase number of retries to this endpoint\n")
         else:
             for data in projectDataPagedList.json()['items']:
                 project_data_metadata.append(data) 
