@@ -56,8 +56,6 @@ You can use  the script [here](https://github.com/keng404/bssh_parallel_transfer
 ## umich_orchestrator.py command line examples
 
 ```bash
-
-# TEST2 : analysis you monitor and trigger will be in the different ICA projects
 python umich_orchestrator.py --api_key_file /opt/api_key.txt --source_project_name ken_debug --destination_project_name Ken_demos 
 ```
 
