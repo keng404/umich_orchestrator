@@ -1,5 +1,5 @@
-# ica_to_cgw
-An orchestration approach to monitor analyses from Illumina Connected Analytics (ICA) and ingest the analyses into Velsera's GCW
+# umich_orchestrator
+An orchestration approach to monitor analyses from Illumina Connected Analytics (ICA) and perform downstream activity for MGI use
 
 ## approach
 
