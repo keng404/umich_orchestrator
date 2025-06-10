@@ -62,6 +62,16 @@ def metadata_with_tag(data):
         if len(data['tags'][val]) > 0:
             found_tags = True
     return found_tags
+# based off of file of interest, return based on nomenclature if file is MGI or not
+def mgi_or_not(foi):
+    is_mgi = False
+    name_simplified = os.path.basename(foi)
+    name_prefix = name_simplified.split('.')[0]
+    name_prefix_split = name_prefix.split('_')
+    if len(name_prefix_split) >= 3:
+       if re.search("M$",name_prefix_split[len(name_prefix_split)-3]) is not None:
+        is_mgi = True
+    return is_mgi
 ### This function returns data found within first-level of analysis output
 #### to avoid redundant copy jobs
 def get_analysis_output_to_copy(analysis_output,analysis_metadata):
@@ -448,16 +458,18 @@ def main():
                         output_folder_path = output['path']
                         run_id = analysis_metadata['reference']
                     if re.search(".fastq.gz$",os.path.basename(path_normalized)) is not None and re.match("Undetermined",os.path.basename(path_normalized)) is None:
-                        data_information = {}
-                        data_information['path'] =  output['path']
-                        data_information['name'] = output['name']
-                        data_to_link[output['id']] = data_information
+                        fastq_of_interest = mgi_or_not(output['path'])
+                        if fastq_of_interest is True:
+                            data_information = {}
+                            data_information['path'] =  output['path']
+                            data_information['name'] = output['name']
+                            data_to_link[output['id']] = data_information
 
                 ##### raise error condition if we can't find FASTQs of interest        
                 if len(list(data_to_link.keys())) < 1:
-                    raise ValueError(f"Could not find FASTQ files for {analysis_metadata['reference']}")
+                    logging_statement(f"Could not find FASTQ files for {analysis_metadata['reference']}")
                 ### link the output data
-                if args.dry_run is False:
+                if args.dry_run is False and len(list(data_to_link.keys())) > 0:
                     data_link_batch = craft_data_batch(list(data_to_link.keys()))
                     print(f"data_link_batch {data_link_batch}")
                     link_batch = link_data(my_api_key,data_link_batch,destination_project_id)
