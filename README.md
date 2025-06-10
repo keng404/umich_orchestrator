@@ -59,7 +59,7 @@ You can use  the script [here](https://github.com/keng404/bssh_parallel_transfer
 python umich_orchestrator.py --api_key_file /opt/api_key.txt --source_project_name ken_debug --destination_project_name Ken_demos 
 ```
 
-## fcs.ICA_to_CGW.orchestrator.py command line options
+## umich_orchestrator.py command line options
 
 - ```--api_key_file``` : path to text file containing API Key for ICA
 - ```--source_project_name``` : Name of the ICA project where your Autolaunched analysis resides
