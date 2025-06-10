@@ -23,7 +23,7 @@ Some guidance on setting up a cron job can be found on this [page](https://www.r
 
 These are custom script(s) based on an end-user's use-case
 
-## [umich_orchestratory](https://github.com/keng404/umich_orchestrator/blob/main/umich_orchestrator.py) Process Outline
+## [umich_orchestrator](https://github.com/keng404/umich_orchestrator/blob/main/umich_orchestrator.py) Process Outline
 
 0) Messages from the script are written by default logfile ```orchestrator.log``` in the directory where you run the script
 	- As a convenience, you can also use the Docker image ```keng404/umich_orchestrator:0.0.1``` to run this script
