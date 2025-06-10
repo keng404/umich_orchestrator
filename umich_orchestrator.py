@@ -68,8 +68,8 @@ def mgi_or_not(foi):
     name_simplified = os.path.basename(foi)
     name_prefix = name_simplified.split('.')[0]
     name_prefix_split = name_prefix.split('_')
-    if len(name_prefix_split) >= 3:
-       if re.search("M$",name_prefix_split[len(name_prefix_split)-3]) is not None:
+    if len(name_prefix_split) >= 1:
+       if re.search("M$",name_prefix_split[0]) is not None:
         is_mgi = True
     return is_mgi
 ### This function returns data found within first-level of analysis output
