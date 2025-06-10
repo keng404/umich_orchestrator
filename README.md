@@ -19,7 +19,7 @@ These are scripts or cron jobs that invoke the orchestrator scripts at a cadence
 
 Some guidance on setting up a cron job can be found on this [page](https://www.redhat.com/en/blog/linux-cron-command)
 
-## orchestrators
+## orchestrator(s)
 
 These are custom script(s) based on an end-user's use-case
 
@@ -66,7 +66,9 @@ python umich_orchestrator.py --api_key_file /opt/api_key.txt --source_project_na
 
 - ```--api_key_file``` : path to text file containing API Key for ICA
 - ```--source_project_name``` : Name of the ICA project where your Autolaunched analysis resides
-- ```--destination_project_name``` :  Name of the ICA project where your downstream users --- only need to specify this if the projects are different. 
+- ```--destination_project_name``` :  Name of the ICA project where your downstream users --- only need to specify this if the projects are different.
+- ```--days_to_archive``` : Data older than these many days will be archived (default is 60 days).
+- ```--days_to_delete``` : Data older than these many days will be deleted (default is 90 days).
 - ```--dry_run``` : [OPTIONAL] flag that allows you to run the script without performing any linking and updating the analyses_managed_table
 
 
