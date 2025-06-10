@@ -44,7 +44,7 @@ These are custom script(s) based on an end-user's use-case
 - [ ] [OPTIONAL] Add bash_wrapper to run orchestrator script every 5/10 minutes
 - [X] Give instructions for setting up Cron job
 - [X] Build and push official docker image based-off of this [Dockerfile](https://github.com/keng404/umich_orchestrator/blob/main/Dockerfile)
-- [ ] 
+
 ## umich_orchestrator.py FAQs
 
 1) How do I generate an API key?
