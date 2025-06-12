@@ -9,16 +9,33 @@ def who_am_i(credentials):
     headers['Authorization'] = f"Bearer {credentials}"
     headers['Content-Type'] = "application/json"
     basespace_url = "https://api.basespace.illumina.com/v1pre3/users/current"
-    my_id = None
+    my_response = None
     try:
         platform_response = requests.get(basespace_url, headers=headers)
         platform_response_json = platform_response.json()
-        my_id = platform_response.json()['Response']['Id']
+        my_response = platform_response.json()['Response']
     except:
         platform_response = requests.get(basespace_url, headers=headers)
         pprint(platform_response,indent=4)
         raise ValueError(f"Could not find id for user for the following URL: {basespace_url}")
-    return my_id
+    return my_response
+
+def get_scopes(credentials):
+    headers = CaseInsensitiveDict()
+    headers['accept'] = "application/json"
+    headers['Authorization'] = f"Bearer {credentials}"
+    headers['Content-Type'] = "application/json"
+    basespace_url = "https://api.basespace.illumina.com/v1pre3/oauthv2/token/current"
+    my_response = None
+    try:
+        platform_response = requests.get(basespace_url, headers=headers)
+        platform_response_json = platform_response.json()
+        my_response = platform_response.json()['Response']
+    except:
+        platform_response = requests.get(basespace_url, headers=headers)
+        pprint(platform_response,indent=4)
+        raise ValueError(f"Could not find id for user for the following URL: {basespace_url}")
+    return my_response
 
 
 # STEP 1: list projects for current BaseSpace user
@@ -32,7 +49,7 @@ def list_basespace_projects(credentials):
     headers['accept'] = "application/json"
     headers['Authorization'] = f"Bearer {credentials}"
     headers['Content-Type'] = "application/json"
-    my_projects = []
+    my_projects = dict()
     try:
         platform_response = requests.get(basespace_url, headers=headers)
         platform_response_json = platform_response.json()
@@ -44,7 +61,7 @@ def list_basespace_projects(credentials):
             items_returned = platform_response_json['Response']['DisplayedCount']
             if total_items <= page_size:
                 for project_idx,project in enumerate(platform_response.json()['Response']['Items']):
-                    my_projects.append(project['Id'])
+                    my_projects[project['Name']] = project
             else:
                 total_items_returned += items_returned
                 while total_items_returned < total_items:
@@ -55,7 +72,7 @@ def list_basespace_projects(credentials):
                     platform_response_json = platform_response.json()
                     items_returned = platform_response.json()['Response']['DisplayedCount']
                     for project_idx,project in enumerate(platform_response.json()['Response']['Items']):
-                        my_projects.append(project['Id'])
+                        my_projects[project['Name']] = project
     except:
         platform_response = requests.get(basespace_url, headers=headers)
         pprint(platform_response,indent=4)
@@ -73,7 +90,7 @@ def get_datasets(project_id,credentials,owning_id=None):
     headers['accept'] = "application/json"
     headers['Authorization'] = f"Bearer {credentials}"
     headers['Content-Type'] = "application/json"
-    my_datasets = []
+    my_datasets = dict()
     ### check for 'DateCreated'
     try:
         platform_response = requests.get(basespace_url, headers=headers)
@@ -87,10 +104,10 @@ def get_datasets(project_id,credentials,owning_id=None):
             if total_items <= page_size:
                 for dataset_idx,dataset in enumerate(platform_response.json()['Items']):
                     if owning_id is None:
-                        my_datasets.append(dataset['Id'])
+                        my_datasets[dataset['Id']] = dataset
                     else:
                         if dataset['Project']['UserOwnedBy']['Id'] == owning_id:
-                            my_datasets.append(dataset['Id'])
+                            my_datasets[dataset['Id']] = dataset
             else:
                 total_items_returned += items_returned
                 while total_items_returned < total_items:
@@ -102,17 +119,17 @@ def get_datasets(project_id,credentials,owning_id=None):
                     items_returned = platform_response_json['Paging']['DisplayedCount']
                     for dataset_idx,dataset in enumerate(platform_response.json()['Items']):
                         if owning_id is None:
-                            my_datasets.append(dataset['Id'])
+                            my_datasets[dataset['Id']] = dataset
                         else:
                             if dataset['Project']['UserOwnedBy']['Id'] == owning_id:
-                                my_datasets.append(dataset['Id'])
+                                my_datasets[dataset['Id']] = dataset
 
     except:
         platform_response = requests.get(basespace_url, headers=headers)
         pprint(platform_response,indent=4)
         raise ValueError(f"Could not find datasets for the following URL: {basespace_url}")
     return my_datasets  
-#curl -X 'GET' -H 'Authorization: Bearer abf7d1f438144408b3532541268daa7c' -H 'Content-Type: application/json' -H 'User-Agent: BaseSpaceGOSDK/0.13.10 BaseSpaceCLI/1.6.2' 'https://api.basespace.illumina.com/v1pre3/users/current/runs?Limit=200&Offset=0'
+
 # STEP 2: get datasets for each user
 def list_runs(credentials,owning_id=None):
     page_size = 200
@@ -124,7 +141,7 @@ def list_runs(credentials,owning_id=None):
     headers['accept'] = "application/json"
     headers['Authorization'] = f"Bearer {credentials}"
     headers['Content-Type'] = "application/json"
-    my_runs = []
+    my_runs = dict()
 
     ### check for 'DateCreated'
     try:
@@ -137,7 +154,7 @@ def list_runs(credentials,owning_id=None):
             items_returned = platform_response_json['Response']['DisplayedCount']
             if total_items <= page_size:
                 for run_idx,run in enumerate(platform_response.json()['Response']['Items']):
-                    my_runs.append(run['Id'])
+                    my_runs[run['Id']] = run
             else:
                 total_items_returned += items_returned
                 while total_items_returned < total_items:
@@ -148,24 +165,37 @@ def list_runs(credentials,owning_id=None):
                     platform_response_json = platform_response.json()
                     items_returned = platform_response_json['Response']['DisplayedCount']
                     for run_idx,run in enumerate(platform_response.json()['Response']['Items']):
-                        my_runs.append(run['Id'])
+                        my_runs[run['Id']] = run
 
     except:
         platform_response = requests.get(basespace_url, headers=headers)
         pprint(platform_response,indent=4)
         raise ValueError(f"Could not find runs for the following URL: {basespace_url}")
     return my_runs  
-#curl -X 'POST' -d '{"DatasetIds":["ds.b06fb5b8b42746c59b54ae7bf45e55b6"]}' -H 'Authorization: Bearer myTOKEN' -H 'Content-Type: application/json' -H 'User-Agent: BaseSpaceGOSDK/0.13.10 BaseSpaceCLI/1.6.2' 'https://api.basespace.illumina.com/v2/archive'
-#curl -X 'POST' -d '{"DatasetIds":["ds.b06fb5b8b42746c59b54ae7bf45e55b6"]}' -H 'Authorization: Bearer myTOKEN' -H 'Content-Type: application/json' -H 'User-Agent: BaseSpaceGOSDK/0.13.10 BaseSpaceCLI/1.6.2' 'https://api.basespace.illumina.com/v2/restore'
 
-bearer_token = "mY_TOKEN"
-my_id = who_am_i(bearer_token)
-print(f"{my_id}")
-my_basespace_projects = list_basespace_projects(bearer_token)
-print(f"{my_basespace_projects}")
 
-my_datasets = get_datasets(my_basespace_projects[0],bearer_token)
-print(f"{my_datasets}")
+def get_projects_from_basespace_json(input_json):
+    with open(input_json) as f:
+        d = json.load(f)
 
-my_basespace_runs = list_runs(bearer_token)
-print(f"{my_basespace_runs}")
+    basespace_projects = []
+    for i,k in enumerate(d['Projects']):
+        basespace_projects.append(d['Projects'][k]['Name'])
+    return basespace_projects
+
+def empty_trash(credentials):
+    headers = CaseInsensitiveDict()
+    headers['accept'] = "application/json"
+    headers['Authorization'] = f"Bearer {credentials}"
+    headers['Content-Type'] = "application/json"
+    basespace_url = "https://api.basespace.illumina.com/v2/trash"
+    my_response = None
+    try:
+        platform_response = requests.delete(basespace_url, headers=headers)
+        platform_response_json = platform_response.json()
+        my_response = platform_response.json()
+    except:
+        platform_response = requests.delete(basespace_url, headers=headers)
+        pprint(platform_response,indent=4)
+        raise ValueError(f"Could not find id for user for the following URL: {basespace_url}")
+    return my_response

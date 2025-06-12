@@ -17,6 +17,7 @@ import ica_analysis_launch
 import samplesheet_utils
 import ica_data_transfer
 import ica_analysis_outputs
+import bssh_utils
 ######## import python modules
 import argparse
 import time
@@ -48,10 +49,8 @@ def logging_statement(string_to_print):
 def get_timestamp_previous_days(days_ago):
     # Get today's date
     today = dt.today()
-
     # Calculate the date 60 days ago
     days_ago_obj = today - timedelta(days=days_ago)
-
     # Convert the date to a datetime object (midnight of that day)
     datetime_days_ago = dt.combine(days_ago_obj, dt.min.time())
     return(datetime_days_ago)
@@ -67,9 +66,11 @@ def mgi_or_not(foi):
     is_mgi = False
     name_simplified = os.path.basename(foi)
     name_prefix = name_simplified.split('.')[0]
-    name_prefix_split = name_prefix.split('_')
-    if len(name_prefix_split) >= 1:
-       if re.search("M$",name_prefix_split[0]) is not None:
+    name_prefix_split = name_prefix.split('-')
+    ### matches on M-123-345*.fastq.gz
+    ### will not match on M_123_4325*.fastq.gz
+    # check if the FASTQ starts with an  'M'
+    if name_prefix_split[0] == "M":
         is_mgi = True
     return is_mgi
 ### This function returns data found within first-level of analysis output
@@ -306,7 +307,19 @@ def get_data_id(api_key,file_path,project_id):
     if data_id is None:
         raise ValueError(f"Cannot find data {file_path} in the project {project_id}")
     return data_id
-                    
+################    
+def check_basespace_project(credentials,project_list):
+    id_list = []
+    ### keys of this dict are basespace ids, we will interate through the dict
+    ### and match on project name
+    basespace_project_dict = bssh_utils.list_basespace_projects(credentials)
+    
+    for project_name in project_list:
+        if project_name in list(basespace_project_dict.keys()):
+            id_list.append(basespace_project_dict[project_name]['Id'])
+        else:
+            logging_statement(f"WARNING: could not find BaseSpace project named {project_name}")
+    return id_list
 ###################################################
 ### Here SOURCE and DESTINATION project refer to a BSSH-managed project in ICA and downstream project
 ################
@@ -319,6 +332,7 @@ def main():
     parser.add_argument('--analyses_monitored_file', default='analyses_monitored_file.txt', type=str, help="Table containing ICA analyses of interest")
     parser.add_argument('--analyses_managed_table', default='analyses_managed_table.txt', type=str, help="Table recording ICA analyses that have been managed")
     parser.add_argument('--api_key_file', default=None, type=str, help="file that contains API-Key")
+    parser.add_argument('--basespace_access_token_file', default=os.environ['HOME'] + "/.basespace/default.cfg", type=str, help="file that contains basespace access token")
     parser.add_argument('--server_url', default='https://ica.illumina.com', type=str, help="ICA base URL")
     parser.add_argument('--days_to_archive',default=60, type=int, help="Number of days from current date to archive data from source project")
     parser.add_argument('--days_to_delete',default=90, type=int, help="Number of days from current date to delete data from source project")
@@ -331,7 +345,11 @@ def main():
     destination_project_name = args.destination_project_name
     analyses_monitored_file = args.analyses_monitored_file
     analyses_managed_table = args.analyses_managed_table
+    basespace_access_token_file = args.basespace_access_token_file
+    basespace_access_token = None
     os.environ['ICA_BASE_URL'] = args.server_url
+    if args.days_to_archive > args.days_to_delete:
+        logging_statement("WARNING: You've configured archival timestamp to occur prior to delete timestamp --- indicating that you don't want to archive --- is this true?")
     ###### read in api key file
     my_api_key = None
     logging_statement("Grabbing API Key")
@@ -342,6 +360,30 @@ def main():
     if my_api_key is None:
         raise ValueError("Need API key")
 
+    ### read in BaseSpace access token file
+    logging_statement("Grabbing BaseSpace Access Token")
+    if os.path.isfile(basespace_access_token_file) is True:
+        with open(basespace_access_token_file,'r') as f:
+            for line in f.readlines():
+                line_split = line.split(" ")
+                if line_split[0] == "accessToken":
+                    basespace_access_token = str(line_split[len(line_split)-1].strip("\n"))
+    if basespace_access_token is None:
+        raise ValueError(f"Please provide file for --basespace_access_token_file")
+    
+    ### check if user has permissions to move things to trash, empty trash, etc.
+    basespace_user_scopes = bssh_utils.get_scopes(basespace_access_token)
+    expected_scopes = ['READ GLOBAL', 'BROWSE GLOBAL', 'MOVETOTRASH GLOBAL', 'EMPTY TRASH']
+    scopes_missing = []
+    for scope in expected_scopes:
+        if scope not in basespace_user_scopes['Scopes']:
+            scopes_missing.append(scope)
+    if len(scopes_missing) > 0:
+        logging_statement(f"WARNING: Missing the following scopes as a BaseSpace User {scopes_missing}")
+        logging_statement(f"This will limit the ability of this script to archive/delete data as needed")
+        print(f"Found these scopes {basespace_user_scopes['Scopes']}\n")
+        print(f"You can update your permissions by downloading the BaseSpace CLI (bs) from https://developer.basespace.illumina.com/docs/content/documentation/cli/cli-overview#InstallBaseSpaceSequenceHubCLI\nand run the following:\n\nbs auth --force --scopes  'READ GLOBAL, CREATE GLOBAL, BROWSE GLOBAL,CREATE PROJECTS, CREATE RUNS, START APPLICATIONS, MOVETOTRASH GLOBAL, WRITE GLOBAL, EMPTY TRASH'")
+    ####################################
     #### get the project identifiers we need
     if source_project_id is None and source_project_name is not None:
         logging_statement("Grabbing ICA SOURCE PROJECT ID")
@@ -449,6 +491,7 @@ def main():
                 output_folder_id = None
                 output_folder_path = None
                 run_id = None
+                all_fastqs = []
                 #### we only want FASTQ files, no undetermined FASTQ files
                 for output in analysis_output:
                     path_normalized = output['path'].strip("/$")
@@ -457,8 +500,10 @@ def main():
                         output_folder_id = output['id']
                         output_folder_path = output['path']
                         run_id = analysis_metadata['reference']
+                    #### we only want FASTQ files, no undetermined FASTQ files
                     if re.search(".fastq.gz$",os.path.basename(path_normalized)) is not None and re.match("Undetermined",os.path.basename(path_normalized)) is None:
                         fastq_of_interest = mgi_or_not(output['path'])
+                        all_fastqs.append(output['path'])
                         if fastq_of_interest is True:
                             data_information = {}
                             data_information['path'] =  output['path']
@@ -467,7 +512,8 @@ def main():
 
                 ##### raise error condition if we can't find FASTQs of interest        
                 if len(list(data_to_link.keys())) < 1:
-                    logging_statement(f"Could not find FASTQ files for {analysis_metadata['reference']}")
+                    logging_statement(f"WARNING: Could not find MGI FASTQ files from ICA analysis: {analysis_metadata['reference']}")
+                    logging_statement(f"Found these FASTQs: {all_fastqs}")
                 ### link the output data
                 if args.dry_run is False and len(list(data_to_link.keys())) > 0:
                     data_link_batch = craft_data_batch(list(data_to_link.keys()))
@@ -533,54 +579,215 @@ def main():
     delete_timestamp = get_timestamp_previous_days(args.days_to_delete)
     delete_timestamp = re.sub("\\s+","T",str(delete_timestamp))
     delete_timestamp +=  "Z" 
-    delete_data_candidates = ica_analysis_launch.list_project_data_by_time(my_api_key,source_project_id,delete_timestamp)
-    for folder_idx,folder_metadata in enumerate(delete_data_candidates):
-        if folder_metadata['data']['details']['path'] not in folders_whitelist:
-            if re.search("BaseSpace",folder_metadata['data']['details']['application']['name']) is not None:
-                if folder_metadata['data']['details']['status'] == "AVAILABLE" :
-                    logging_statement(f"BaseSpace-managed data: {folder_metadata}")
-                    ica_data_transfer.delete_data_basespace_managed()
-                elif folder_metadata['data']['details']['status'] == "ARCHIVED" :
-                    logging_statement(f"BaseSpace-managed data: {folder_metadata}")
-                    ica_data_transfer.unarchive_data_basespace_managed()
-                    ica_data_transfer.delete_data_basespace_managed()
-            elif re.search("ICA",folder_metadata['data']['details']['application']['name']) is not None:
-                if folder_metadata['data']['details']['status'] == "AVAILABLE" :
-                    logging_statement(f"ICA-managed data: {folder_metadata}")
-                    ica_data_transfer.delete_data_ica_managed()
-                elif folder_metadata['data']['details']['status'] == "ARCHIVED" :
-                    logging_statement(f"ICA-managed data: {folder_metadata}")
-                    ica_data_transfer.unarchive_data_ica_managed()
-                    ica_data_transfer.delete_data_ica_managed()
+    #delete_data_candidates = ica_analysis_launch.list_project_data_by_time(my_api_key,source_project_id,delete_timestamp)
+    analyses_delete_list = ica_analysis_monitor.list_project_analyses(my_api_key,source_project_id,delete_timestamp)
+    basespace_files_of_interest = ["bsshoutput.json"]
+    ica_files_of_interest = ["_tags.json"]
+    basespace_projects_to_check = []
+    basespace_projects_to_unarchive = []
+    for delete_idx,analysis_to_delete in enumerate(analyses_delete_list):
+        outputs_of_interest = ica_analysis_outputs.get_analysis_output_listing(my_api_key,source_project_id,analysis_to_delete['id'])
+        for idx,item in enumerate(outputs_of_interest['items'][0]['data']):
+            analysis_output_folder = item['dataId']
+        analysis_output = []
+        try:
+            analysis_output = ica_analysis_outputs.get_full_analysis_output(my_api_key,source_project_id,analysis_to_delete['id'])
+        except:
+            logging_statement(f"Don't see output for analysis_id: {analysis_to_delete['id']}\nPerhaps data has been deleted already")
+        if len(analysis_output) > 0:
+            can_manage_from_basespace = False
+            can_manage_from_ica = False
+            json_path = None
+            json_id = None
+            ica_file_path = None
+            ica_file_id = None
+            for output_idx,output in enumerate(analysis_output):
+                if os.path.basename(output['path']) in basespace_files_of_interest:
+                    can_manage_from_basespace = True
+                    json_path = output['path']
+                    json_id = output['id']
+                if os.path.basename(output['path']) in ica_files_of_interest:
+                    can_manage_from_ica = True
+                    ica_file_path = output['path']
+                    ica_file_id = output['id']
+            if can_manage_from_basespace is False and can_manage_from_ica is False:
+                logging_statement(f"WARNING: Could not determine if we can manage data from this analysis {analysis_to_delete['id']}")
+                #print(f"{analysis_output}")
+            else:
+                if can_manage_from_basespace:
+                    data_metadata = get_data(my_api_key,json_id,source_project_id)
+                    if data_metadata is not None:
+                        print(f"can_manage_from_basespace {data_metadata}")
+                        if data_metadata == "AVAILABLE":
+                            json_local_path = os.path.join(os.getcwd(),os.path.basename(json_path))
+                            logging_statement(f"Downloading JSON locally")
+                            creds = ica_data_transfer.get_temporary_credentials(my_api_key,source_project_id, json_id)
+                            ica_data_transfer.set_temp_credentials(creds)
+                            ica_data_transfer.download_file(json_local_path,creds)
+                            projects_to_check = bssh_utils.get_projects_from_basespace_json(json_local_path)
+                            for x in projects_to_check:
+                                basespace_projects_to_check.append(x)
+                        elif data_metadata == "ARCHIVED":
+                            logging_statement(f"{json_path} is already archived")
+                elif can_manage_from_ica:
+                    data_metadata = get_data(my_api_key,ica_file_id,source_project_id)
+                    if data_metadata is not None:
+                        print(f"can_manage_from_ica {data_metadata}")
+                        if data_metadata == "AVAILABLE":
+                            if args.dry_run is False:
+                                ica_data_transfer.delete_data_ica_managed(my_api_key,analysis_output_folder,source_project_id)
+                            else:
+                                logging_statement(f"Running ica_data_transfer.delete_data_ica_managed({my_api_key},{analysis_output_folder},{source_project_id})")
+                        elif data_metadata == "ARCHIVED":
+                            if args.dry_run is False:
+                                ica_data_transfer.unarchive_data_ica_managed(my_api_key,analysis_output_folder,source_project_id)
+                                ica_data_transfer.delete_data_ica_managed_v2(my_api_key,analysis_output_folder,source_project_id)
+                            else:
+                                logging_statement(f"Running ica_data_transfer.unarchive_data_ica_managed({my_api_key},{analysis_output_folder},{source_project_id})")
+                                logging_statement(f"Running ica_data_transfer.delete_data_ica_managed_v2({my_api_key},{analysis_output_folder},{source_project_id})")
+
+    basespace_projects_to_check = list(set(basespace_projects_to_check))     
+    logging_statement(f"bssh_projects_to_check: {basespace_projects_to_check}")
+    basespace_project_ids = check_basespace_project(basespace_access_token,basespace_projects_to_check)   
+    logging_statement(f"basespace_project_ids: {basespace_project_ids}")
+    ############################
+    run_ids_to_delete = []
+    run_ids_to_restore = []
+    dataset_ids_to_delete = []
+    dataset_ids_to_restore = []
+    ### mode = "delete", project_id = project_id, timestamp = delete_timestamp
+    ### for each basespace_project_id, provide timestamp, and return dataset_ids to take action on (datasets_available)
+    ### datasets_archived will need to be unarchived and then deleted
+    for project_id in basespace_project_ids:
+        datasets_to_manage = ica_data_transfer.find_basespace_datasets(basespace_access_token,mode = "delete", project_id = project_id, timestamp = delete_timestamp)
+        if len(datasets_to_manage['datasets_available']) > 0:
+            for x in datasets_to_manage['datasets_available']:
+                dataset_ids_to_delete.append(x)
+        if len(datasets_to_manage['datasets_archived']) > 0:
+            for x in datasets_to_manage['datasets_archived']:
+                dataset_ids_to_restore.append(x)
+                dataset_ids_to_delete.append(x)
+    ## check for BaseSpace Runs to delete
+    ### provide timestamp, and return run_ids to take action on (runs_available)
+    ### mode = "delete", timestamp = delete_timestamp
+    ### runs_archived will need to be unarchived and then deleted
+    runs_to_manage = ica_data_transfer.find_basespace_runs(basespace_access_token,mode = "delete", timestamp = delete_timestamp)
+    if len(runs_to_manage['runs_available']) > 0:
+        for x in runs_to_manage['runs_available']:
+            run_ids_to_delete.append(x)
+    if len(runs_to_manage['runs_archived']) > 0:
+        for x in runs_to_manage['runs_archived']:
+            run_ids_to_restore.append(x)    
+            run_ids_to_delete.append(x)
+    #################################
+    logging_statement(f"basespace_datasets_to_restore: {dataset_ids_to_restore}")
+    if args.dry_run is False:
+        ica_data_transfer.unarchive_data_basespace_managed(basespace_access_token,dataset_ids = dataset_ids_to_restore)
+    logging_statement(f"basespace_datasets_to_delete: {dataset_ids_to_delete}")
+    if args.dry_run is False:
+        for dataset_id in dataset_ids_to_delete:
+            ica_data_transfer.delete_data_basespace_managed(basespace_access_token,datasets = dataset_id)
+    logging_statement(f"basespace_runs_to_restore: {run_ids_to_restore}")
+    if args.dry_run is False:
+        ica_data_transfer.unarchive_data_basespace_managed(basespace_access_token,run_ids = run_ids_to_restore)
+    logging_statement(f"basespace_runs_to_delete: {run_ids_to_delete}")
+    if args.dry_run is False:
+        for run_id in run_ids_to_delete:
+            ica_data_transfer.delete_data_basespace_managed(basespace_access_token,runs = run_id)
     logging_statement(f"Deleting data in {source_project_id} created {delete_timestamp} or earlier")
-    
+    #### empty trash
+    if args.dry_run is False:
+        bssh_utils.empty_trash(basespace_access_token)
+
     ### Check on data in source_project to archive
     archive_timestamp = get_timestamp_previous_days(args.days_to_archive)
     archive_timestamp = re.sub("\\s+","T",str(archive_timestamp))
     archive_timestamp +=  "Z" 
-    archive_data_candidates = ica_analysis_launch.list_project_data_by_time(my_api_key,source_project_id,archive_timestamp)
-    for folder_idx,folder_metadata in enumerate(archive_data_candidates):
-        if folder_metadata['data']['details']['path'] not in folders_whitelist:
-            folder_of_interest = metadata_with_tag(folder_metadata['data']['details'])
-            logging_statement(f"{folder_of_interest}")
-            if re.search("BaseSpace",folder_metadata['data']['details']['application']['name']) is not None:
-                if folder_metadata['data']['details']['status'] == "AVAILABLE" :
-                    if folder_of_interest:
-                        logging_statement(f"BaseSpace-managed data: {folder_metadata}")
-                        ica_data_transfer.archive_data_basespace_managed()
-                elif folder_metadata['data']['details']['status'] == "ARCHIVED" :
-                    if folder_of_interest:
-                        logging_statement(f"No need to touch BaseSpace-managed archived data: {folder_metadata}")
-
-            elif re.search("ICA",folder_metadata['data']['details']['application']['name']) is not None:
-                if folder_metadata['data']['details']['status'] == "AVAILABLE" :
-                    if folder_of_interest:
-                        logging_statement(f"ICA-managed data: {folder_metadata}")
-                        ica_data_transfer.archive_data_ica_managed()
-                elif folder_metadata['data']['details']['status'] == "ARCHIVED" :
-                    if folder_of_interest:
-                        logging_statement(f"No need to touch ICA-managed archived data: {folder_metadata}")
-
+    #archive_data_candidates = ica_analysis_launch.list_project_data_by_time(my_api_key,source_project_id,archive_timestamp)
+    analyses_archive_list = ica_analysis_monitor.list_project_analyses(my_api_key,source_project_id,archive_timestamp,delete_timestamp)
+    basespace_projects_to_check = []
+    for archive_idx,analysis_to_archive in enumerate(analyses_archive_list):
+        outputs_of_interest = ica_analysis_outputs.get_analysis_output_listing(my_api_key,source_project_id,analysis_to_archive['id'])
+        for idx,item in enumerate(outputs_of_interest['items'][0]['data']):
+            analysis_output_folder = item['dataId']
+        analysis_output = []
+        try:
+            analysis_output = ica_analysis_outputs.get_full_analysis_output(my_api_key,source_project_id,analysis_to_archive['id'])
+        except:
+            logging_statement(f"Don't see output for analysis_id: {analysis_to_archive['id']}\nPerhaps data has been deleted already")
+        if len(analysis_output) > 0:
+            can_manage_from_basespace = False
+            can_manage_from_ica = False
+            json_path = None
+            json_id = None
+            ica_file_path = None
+            ica_file_id = None
+            for output_idx,output in enumerate(analysis_output):
+                if os.path.basename(output['path']) in basespace_files_of_interest:
+                    can_manage_from_basespace = True
+                    json_path = output['path']
+                    json_id = output['id']
+                if os.path.basename(output['path']) in ica_files_of_interest:
+                    can_manage_from_ica = True
+                    ica_file_path = output['path']
+                    ica_file_id = output['id']
+            if can_manage_from_basespace is False and can_manage_from_ica is False:
+                logging_statement(f"WARNING: Could not determine if we can manage data from this analysis {analysis_to_archive['id']}")
+                #print(f"{analysis_output}")
+            else:
+                if can_manage_from_basespace:
+                    data_metadata = get_data(my_api_key,json_id,source_project_id)
+                    if data_metadata is not None:
+                        print(f"can_manage_from_basespace {data_metadata}")
+                        if data_metadata == "AVAILABLE":
+                            json_local_path = os.path.join(os.getcwd(),os.path.basename(json_path))
+                            logging_statement(f"Downloading JSON locally")
+                            creds = ica_data_transfer.get_temporary_credentials(my_api_key,source_project_id, json_id)
+                            ica_data_transfer.set_temp_credentials(creds)
+                            ica_data_transfer.download_file(json_local_path,creds)
+                            projects_to_check = bssh_utils.get_projects_from_basespace_json(json_local_path)
+                            for x in projects_to_check:
+                                basespace_projects_to_check.append(x)
+                        elif data_metadata == "ARCHIVED":
+                            logging_statement(f"Analysis is already archived {analysis_to_archive['id']}")
+                elif can_manage_from_ica:
+                    data_metadata = get_data(my_api_key,ica_file_id,source_project_id)
+                    if data_metadata is not None:
+                        print(f"can_manage_from_ica {data_metadata}")
+                        if data_metadata == "AVAILABLE":
+                            if args.dry_run is False:
+                                ica_data_transfer.archive_data_ica_managed(my_api_key,analysis_output_folder,source_project_id)
+                            else:
+                                logging_statement(f"Running ica_data_transfer.archive_data_ica_managed({my_api_key},{analysis_output_folder},{source_project_id})")
+                        elif data_metadata == "ARCHIVED":
+                            logging_statement(f"Analysis is already archived {analysis_to_archive['id']}")
+    basespace_projects_to_check = list(set(basespace_projects_to_check))     
+    logging_statement(f"bssh_projects_to_check: {basespace_projects_to_check}\n")
+    basespace_project_ids = check_basespace_project(basespace_access_token,basespace_projects_to_check)   
+    logging_statement(f"basespace_project_ids: {basespace_project_ids}\n")    
+    ############################
+    ### mode = "archive", project_id = project_id, timestamp = archive_timestamp
+    run_ids_to_archive = []
+    dataset_ids_to_archive = []
+    ### for each basespace_project_id, provide timestamp, and return dataset_ids to take action on (datasets_available)
+    for project_id in basespace_project_ids:
+        datasets_to_manage = ica_data_transfer.find_basespace_datasets(basespace_access_token,mode = "archive", project_id = project_id, timestamp = archive_timestamp,timestamp2 = delete_timestamp)
+        if len(datasets_to_manage['datasets_available']) > 0:
+            for x in datasets_to_manage['datasets_available']:
+                dataset_ids_to_archive.append(x)
+    ### mode = "archive",  timestamp = archive_timestamp
+    ### provide timestamp, and return run_ids to take action on (runs_available)
+    runs_to_manage = ica_data_transfer.find_basespace_runs(basespace_access_token,mode = "archive",  timestamp = archive_timestamp, timestamp2 = delete_timestamp)
+    if len(runs_to_manage['runs_available']) > 0:
+        for x in runs_to_manage['runs_available']:
+             run_ids_to_archive.append(x)
+    ##################
+    logging_statement(f"basespace_datasets_to_archive: {dataset_ids_to_archive}\n")
+    if args.dry_run is False:
+        ica_data_transfer.archive_data_basespace_managed(basespace_access_token,dataset_ids = dataset_ids_to_archive)
+    logging_statement(f"basespace_runs_to_archive: {run_ids_to_archive}\n")
+    if args.dry_run is False:
+        ica_data_transfer.archive_data_basespace_managed(basespace_access_token,run_ids = run_ids_to_archive)
     logging_statement(f"Archiving data in {source_project_id} created {archive_timestamp} or earlier")
 
 

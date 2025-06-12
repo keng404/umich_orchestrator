@@ -5,9 +5,9 @@ ENV WORKDIR /opt
 COPY requirements.txt ${WORKDIR}/
 RUN pip3 install -r /opt/requirements.txt
 
-# copy python and bash wrapper
-COPY *py ${WORKDIR}/
-
 ### add some dev tools
 RUN apt-get update -y && \
     apt-get install -y emacs screen
+
+# copy scripts
+COPY *py ${WORKDIR}/

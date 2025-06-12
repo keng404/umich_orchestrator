@@ -11,6 +11,7 @@ import time
 import re
 from time import sleep
 from datetime import datetime as dt
+from datetime import timedelta
 import random
 ###############################################
 def logging_statement(string_to_print):
@@ -79,7 +80,7 @@ def get_project_id(api_key, project_name):
         return projects[0]['id']
 ############
 ############
-def list_project_analyses(api_key,project_id):
+def list_project_analyses(api_key,project_id,timestamp_to_check=None,timestamp2_to_check=None):
     # List all analyses in a project
     pageOffset = 0
     remainingRecords = 1000
@@ -94,6 +95,20 @@ def list_project_analyses(api_key,project_id):
     headers['accept'] = 'application/vnd.illumina.v3+json'
     headers['Content-Type'] = 'application/vnd.illumina.v3+json'
     headers['X-API-Key'] = f"{api_key}"
+    time_query = None
+    time_query2 = None
+    format_string2  = "%Y-%m-%dT%H:%M:%S.%fZ"
+    format_string1  = "%Y-%m-%dT%H:%M:%SZ"
+    if timestamp_to_check is not None:
+        try:
+            time_query = dt.strptime(timestamp_to_check,format_string1)
+        except:
+            logging_statement(f"WARNING: could not parse timestamp {timestamp_to_check}")
+    if timestamp2_to_check is not None:
+        try:
+            time_query2 = dt.strptime(timestamp2_to_check,format_string1)
+        except:
+            logging_statement(f"WARNING: could not parse timestamp {timestamp2_to_check}")
     try:
         projectAnalysisPagedList = requests.get(full_url, headers=headers)
         #totalRecords = projectAnalysisPagedList.json()['totalItemCount']
@@ -106,7 +121,22 @@ def list_project_analyses(api_key,project_id):
                 projectAnalysisPagedList = requests.get(full_url, headers=headers)
                 ##pprint(projectAnalysisPagedList.json(),indent=4)
                 for analysis in projectAnalysisPagedList.json()['items']:
-                    analyses_metadata.append(analysis)
+                    if time_query is None:
+                        analyses_metadata.append(analysis)
+                    else:
+                        analysis_start_time = None
+                        try:
+                            analysis_start_time  = dt.strptime(analysis['startDate'],format_string2)
+                        except:
+                            analysis_start_time  = dt.strptime(analysis['startDate'],format_string1)
+                        if analysis_start_time is not None:
+                            if time_query2 is None:
+                                if analysis_start_time < time_query:
+                                    #print(f"analysis_id: {analysis['id']} analysis_start_time: {analysis['startDate']}")
+                                    analyses_metadata.append(analysis)
+                            else:
+                                if analysis_start_time < time_query and analysis_start_time >= time_query2:
+                                    analyses_metadata.append(analysis)
                 page_number += 1
                 number_of_rows_to_skip = page_number * pageSize
                 nextPageToken = projectAnalysisPagedList.json()['nextPageToken']
