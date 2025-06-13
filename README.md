@@ -9,7 +9,8 @@ An orchestration approach to monitor analyses from Illumina Connected Analytics 
 - Run ```docker pull keng404/umich_orchestrator:0.0.1``` and mount API key and BaseSpace access token file
 Current image digest is ```sha256:dce3373b312966d0a660db96e4c8b352b5f119c787b75cc9d990418418ae0c92```
 - To verify the image digest, you can run ```docker images --digests``` and check the digest column to see if the digest value matches the one above
-- Or you can run ```docker pull keng404/umich_orchestrator@sha256:dce3373b312966d0a660db96e4c8b352b5f119c787b75cc9d990418418ae0c92``` when initially pulling the image
+- Or you can run ```bash 
+docker pull keng404/umich_orchestrator@sha256:dce3373b312966d0a660db96e4c8b352b5f119c787b75cc9d990418418ae0c92``` when initially pulling the image
 3) Run in ICA Bench workspace
 - Create ICA Bench workspace and follow steps from ```1)``` to install prequisite modules and run orchestrator script
 
