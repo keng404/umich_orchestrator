@@ -5,13 +5,12 @@ usage()
         echo "umich_orchestrator_wrapper.sh"
         echo "Ken Eng 13-Jun-2025"
         echo
-        echo "Runs umich.py"
+        echo "Runs umich_orchestrator.py"
         echo "An orchestration approach to monitor analyses from Illumina Connected Analytics (ICA)"
         echo "and carry out downstream Clinical and MGI activity"
         echo
-        echo "Usage: $0 [-a api_key_file] [-s source_project_name] [-m pipeline_name_to_monitor] \ "
-        echo "                           [-t pipeline_name_to_trigger]  \ "
-        echo "                           [OPTIONAL] [-d destination_project_name] [-f api_template_file] \ "
+        echo "Usage: $0 [-a api_key_file] [-s source_project_name] \ "
+        echo "                              [-d destination_project_name] [-b basespace_access_token_file] \ "
         echo
         echo "  [-a api_key_file]            	- path to text file containing API Key for ICA"
         echo "  [-s source_project_name]  		- Name of the ICA project where your BCLConvert/DRAGEN analysis resides"
