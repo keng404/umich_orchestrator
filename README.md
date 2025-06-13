@@ -12,7 +12,7 @@ Current image digest is ```sha256:dce3373b312966d0a660db96e4c8b352b5f119c787b75c
 To check the image digest, you can run ```docker images --digests``` and check the digest column to see if the digest value matches the one above.
 Or you can run ```docker pull keng404/umich_orchestrator@sha256:dce3373b312966d0a660db96e4c8b352b5f119c787b75cc9d990418418ae0c92``` when initially pulling the image
 3) Run in ICA Bench workspace
-- Create ICA Bench workspace and follow steps from ```1)`` to install prequisite modules and run orchestrator script
+- Create ICA Bench workspace and follow steps from ```1)``` to install prequisite modules and run orchestrator script
 
 ## umich_orchestrator.py FAQs
 
@@ -78,14 +78,14 @@ These are custom script(s) based on an end-user's use-case
 	- As a convenience, you can also use the Docker image ```keng404/umich_orchestrator:0.0.1``` to run this script
 1) Monitor BCLConvert analyses in a project you specify
 2) If analysis is completed
-	- Check if analysis is in a triggered analysis table ```analyses_managed_table.txt```
+	- Check if analysis is in a triggered analysis table ```analyses_managed_table.txt```. See [here](https://github.com/keng404/umich_orchestrator/blob/main/analyses_managed_table.txt) for example
 	- This can filepath can be customized
 	- Format is ```analysis_id_managed,run_id```
 		- ```analysis_id_managed``` = analysis_id of BCLConvert analysis
 		- ```run_id``` = folder name 		
 	- If analysis is not in the managed analysis table
 		- link FASTQ data to downstream project if it matches MGI file nomenclature
-     		- create a ***download manifest csv*** file to store information so end-users can download data if needed
+     		- create a ***download manifest csv*** file to store information so end-users can download data if needed. See [here](https://github.com/keng404/umich_orchestrator/blob/main/20240529_LH00619_0013_B22CCFJLT4_a912e3_9d578d-BclConvert_v4_1_23_patch1-7898625c-01f0-4cc0-b9ed-89216d700613.download_manifest.csv) for example 
 				- file format of this CSV file is as follows ```file_name,file_path,data_id,project_id```
 					- ```file_name``` : name of the FASTQ file
 					- ```file_path``` : path of the FASTQ file on ICA
@@ -111,6 +111,7 @@ These are custom script(s) based on an end-user's use-case
 - [X] Give instructions for setting up Cron job
 - [X] Build and push official docker image based-off of this [Dockerfile](https://github.com/keng404/umich_orchestrator/blob/main/Dockerfile)
 - [ ] Add in logic for Clinical Groups needs --- Still gathering requirements
+- [ ] Test data management for manually queued/re-queued ICA analyses
 
 
 
