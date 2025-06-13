@@ -25,7 +25,7 @@ See this [ICA help page](https://help.ica.illumina.com/get-started/gs-getstarted
 2) How do I generate an access token file
 Download BaseSpace CLI from the [BaseSpace CLI documentation](https://developer.basespace.illumina.com/docs/content/documentation/cli/cli-overview#InstallBaseSpaceSequenceHubCLI) and run the following command.
 ```bash
-	bs auth --force --scopes  'READ GLOBAL, CREATE GLOBAL, BROWSE GLOBAL,CREATE PROJECTS, CREATE RUNS, START APPLICATIONS, MOVETOTRASH GLOBAL, WRITE GLOBAL, EMPTY TRASH'
+bs auth --force --scopes  'READ GLOBAL, CREATE GLOBAL, BROWSE GLOBAL,CREATE PROJECTS, CREATE RUNS, START APPLICATIONS, MOVETOTRASH GLOBAL, WRITE GLOBAL, EMPTY TRASH'
 ```
 By default this will create a file called ```~/.basespace/default.cfg```, this is your ```--basespace_access_token_file```
 3) What happens if analysis fails?
