@@ -192,10 +192,8 @@ def empty_trash(credentials):
     my_response = None
     try:
         platform_response = requests.delete(basespace_url, headers=headers)
-        platform_response_json = platform_response.json()
-        my_response = platform_response.json()
     except:
         platform_response = requests.delete(basespace_url, headers=headers)
         pprint(platform_response,indent=4)
-        raise ValueError(f"Could not find id for user for the following URL: {basespace_url}")
-    return my_response
+        raise ValueError(f"Could not empty trash for user for the following URL: {basespace_url}")
+    return platform_response

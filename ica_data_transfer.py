@@ -27,7 +27,28 @@ def logging_statement(string_to_print):
     #############
     final_str = f"[ {timestamp_str} ] {string_to_print}"
     return print(f"{final_str}")
-    
+#########################################
+def get_data_status(api_key,data_id,project_id):
+    api_base_url = os.environ['ICA_BASE_URL'] + "/ica/rest"
+    endpoint = f"/api/projects/{project_id}/data/{data_id}"
+    full_url = api_base_url + endpoint  ############ create header
+    headers = CaseInsensitiveDict()
+    headers['Accept'] = 'application/vnd.illumina.v3+json'
+    headers['Content-Type'] = 'application/vnd.illumina.v3+json'
+    headers['X-API-Key'] = api_key
+    try:
+        response = requests.get(full_url, headers=headers)
+    except:
+        logging_statement(f"data {data_id} not found in project {project_id}")
+        return None
+    data_metadata = response.json()
+    #pprint(data_metadata,indent=4)
+    if 'data' in data_metadata.keys():
+        return data_metadata['data']['details']['status']
+    else:
+        return None
+    return logging_statement(f"Data lookup for {data_id} and {project_id} completed")
+#############################   
 ### obtain temporary AWS credentials
 def get_temporary_credentials(api_key,project_id,data_id):
     api_base_url = os.environ['ICA_BASE_URL'] + "/ica/rest"
@@ -109,6 +130,7 @@ def unarchive_data_ica_managed(api_key,data_id,project_id):
     headers['X-API-Key'] = api_key
     try:
         response = requests.post(full_url, headers=headers)
+        data_status = get_data_status(api_key,data_id,project_id)
     except:
         logging_statement(f"ERROR: Cannot archive data {data_id} not found in project {project_id}")
         return None
@@ -165,10 +187,15 @@ def unarchive_data_basespace_managed(credentials,**kwargs):
     headers['Content-Type'] = "application/json"
     data = dict()
     ############
+    ############
     format_string2  = "%Y-%m-%dT%H:%M:%S.%fZ"
     format_string1  = "%Y-%m-%dT%H:%M:%SZ"
     format_string3  = "%Y-%m-%dT%H:%M:%S"
-    timestamp_obj = dt.strptime(kwargs['timestamp'],format_string1)
+    if 'timestamp' in list(kwargs.keys()):
+        timestamp_obj = dt.strptime(kwargs['timestamp'],format_string1)
+    else:
+        timestamp_obj = None
+    ################
     ################
     for key, value in kwargs.items():
         if key == "dataset_ids":
@@ -192,8 +219,9 @@ def unarchive_data_basespace_managed(credentials,**kwargs):
                         except:
                             dataset_creation_time  = dt.strptime(dataset_creation_date,format_string1)
                         if dataset_creation_time is not None:
-                            if data_creation_time < timestamp_obj:
-                                data['DatasetIds'].append(dataset_id)
+                            if timestamp_obj is not None:
+                                if data_creation_time < timestamp_obj:
+                                    data['DatasetIds'].append(dataset_id)
             data['DatasetIds'] = list(set(data['DatasetIds']))
     if len(list(data.keys())) > 0:
         try:
@@ -207,7 +235,7 @@ def unarchive_data_basespace_managed(credentials,**kwargs):
     else:
         logging_statment(f"ERROR: Please provide items (dataset_ids,run_ids,project_ids) to unarchive")
         return None
-    return True
+    return platform_response_json
 
 def delete_data_basespace_managed(credentials,**kwargs):
     basespace_url = f"https://api.basespace.illumina.com/v2/archive"
@@ -215,6 +243,15 @@ def delete_data_basespace_managed(credentials,**kwargs):
     headers['accept'] = "application/json"
     headers['Authorization'] = f"Bearer {credentials}"
     headers['Content-Type'] = "application/json"
+    ############
+    format_string2  = "%Y-%m-%dT%H:%M:%S.%fZ"
+    format_string1  = "%Y-%m-%dT%H:%M:%SZ"
+    format_string3  = "%Y-%m-%dT%H:%M:%S"
+    if 'timestamp' in list(kwargs.keys()):
+        timestamp_obj = dt.strptime(kwargs['timestamp'],format_string1)
+    else:
+        timestamp_obj = None
+    ################
     data = dict()
     for key, value in kwargs.items():
         if key == "datasets":
@@ -240,14 +277,15 @@ def delete_data_basespace_managed(credentials,**kwargs):
                         except:
                             dataset_creation_time  = dt.strptime(dataset_creation_date,format_string1)
                         if dataset_creation_time is not None:
-                            if data_creation_time < timestamp_obj:
-                                data['DatasetIds'].append(dataset_id)
+                            if timestamp_obj is not None:
+                                if data_creation_time < timestamp_obj:
+                                    data['DatasetIds'].append(dataset_id)
             data['DatasetIds'] = list(set(data['DatasetIds']))
             basespace_url = f"https://api.basespace.illumina.com/v2/{key}/datasets"
     if len(list(data.keys())) > 0:
         try:
             platform_response = requests.delete(basespace_url, headers=headers)
-            platform_response_json = platform_response.json() 
+            #platform_response_json = platform_response.json() 
         except:
             platform_response = requests.delete(basespace_url, headers=headers)
             pprint(platform_response,indent=4)
@@ -256,7 +294,7 @@ def delete_data_basespace_managed(credentials,**kwargs):
     else:
         logging_statment(f"ERROR: Please provide items (datasets,runs,projects) to delete")
         return None            
-    return True
+    return platform_response
 
 def archive_data_basespace_managed(credentials,**kwargs):
     basespace_url = f"https://api.basespace.illumina.com/v2/archive"
@@ -269,7 +307,10 @@ def archive_data_basespace_managed(credentials,**kwargs):
     format_string2  = "%Y-%m-%dT%H:%M:%S.%fZ"
     format_string1  = "%Y-%m-%dT%H:%M:%SZ"
     format_string3  = "%Y-%m-%dT%H:%M:%S"
-    timestamp_obj = dt.strptime(kwargs['timestamp'],format_string1)
+    if 'timestamp' in list(kwargs.keys()):
+        timestamp_obj = dt.strptime(kwargs['timestamp'],format_string1)
+    else:
+        timestamp_obj = None
     ################
     for key, value in kwargs.items():
         if key == "dataset_ids":
@@ -293,8 +334,9 @@ def archive_data_basespace_managed(credentials,**kwargs):
                         except:
                             dataset_creation_time  = dt.strptime(dataset_creation_date,format_string1)
                         if dataset_creation_time is not None:
-                            if data_creation_time < timestamp_obj:
-                                data['DatasetIds'].append(dataset_id)
+                            if  timestamp_obj is not None:
+                                if data_creation_time < timestamp_obj:
+                                    data['DatasetIds'].append(dataset_id)
             data['DatasetIds'] = list(set(data['DatasetIds']))
     if len(list(data.keys())) > 0:
         try:
@@ -308,7 +350,7 @@ def archive_data_basespace_managed(credentials,**kwargs):
     else:
         logging_statment(f"ERROR: Please provide items (dataset_ids,run_ids,project_ids) to archive")
         return None
-    return True
+    return platform_response_json
 
 ### for a given basespace project, return datasets to take action (i.e. archive/unarchive and delete) on
 def find_basespace_datasets(credentials,**kwargs):

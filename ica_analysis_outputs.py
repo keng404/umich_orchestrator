@@ -19,6 +19,7 @@ def logging_statement(string_to_print):
     #############
     final_str = f"[ {timestamp_str} ] {string_to_print}"
     return print(f"{final_str}")
+#############
 def get_analysis_output_listing(api_key,project_id,analysis_id):
      # List all analyses in a project
     api_base_url = "https://ica.illumina.com" + "/ica/rest"

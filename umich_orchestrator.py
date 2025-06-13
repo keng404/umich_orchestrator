@@ -681,23 +681,40 @@ def main():
             run_ids_to_delete.append(x)
     #################################
     logging_statement(f"basespace_datasets_to_restore: {dataset_ids_to_restore}")
-    if args.dry_run is False:
-        ica_data_transfer.unarchive_data_basespace_managed(basespace_access_token,dataset_ids = dataset_ids_to_restore)
     logging_statement(f"basespace_datasets_to_delete: {dataset_ids_to_delete}")
-    if args.dry_run is False:
-        for dataset_id in dataset_ids_to_delete:
-            ica_data_transfer.delete_data_basespace_managed(basespace_access_token,datasets = dataset_id)
     logging_statement(f"basespace_runs_to_restore: {run_ids_to_restore}")
-    if args.dry_run is False:
-        ica_data_transfer.unarchive_data_basespace_managed(basespace_access_token,run_ids = run_ids_to_restore)
     logging_statement(f"basespace_runs_to_delete: {run_ids_to_delete}")
-    if args.dry_run is False:
-        for run_id in run_ids_to_delete:
-            ica_data_transfer.delete_data_basespace_managed(basespace_access_token,runs = run_id)
     logging_statement(f"Deleting data in {source_project_id} created {delete_timestamp} or earlier")
+    if args.dry_run is False:
+        if len(dataset_ids_to_restore) > 0:
+            dataset_unarchive_status = ica_data_transfer.unarchive_data_basespace_managed(basespace_access_token,dataset_ids = dataset_ids_to_restore)
+            pprint(f"dataset_unarchive_status: {dataset_unarchive_status}")
+        else:
+            logging_statement(f"No BaseSpace datasets to unarchive")
+        if len(dataset_ids_to_delete) > 0:
+            for dataset_id in dataset_ids_to_delete:
+                dataset_delete_status = ica_data_transfer.delete_data_basespace_managed(basespace_access_token,datasets = dataset_id)
+                pprint(f"dataset_delete_status for dataset_id {dataset_id} : {dataset_delete_status}")
+        else:
+            logging_statement(f"No BaseSpace datasets to delete")
+        if len(run_ids_to_restore) > 0:
+            run_unarchive_status = ica_data_transfer.unarchive_data_basespace_managed(basespace_access_token,run_ids = run_ids_to_restore)
+            pprint(f"run_unarchive_status: {run_unarchive_status}")
+        else:
+            logging_statement(f"No BaseSpace runs to unarchive")
+        if len(run_ids_to_delete) > 0:
+            for run_id in run_ids_to_delete:
+                run_delete_status = ica_data_transfer.delete_data_basespace_managed(basespace_access_token,runs = run_id)
+                pprint(f"run_delete_status for run_id {run_id} : {run_delete_status}")
+        else:
+            logging_statement(f"No BaseSpace runs to delete")
     #### empty trash
     if args.dry_run is False:
-        bssh_utils.empty_trash(basespace_access_token)
+        if len(dataset_ids_to_delete) + len(run_ids_to_delete) > 0:
+            logging_statement(f"Emptying trash on BaseSpace")
+            bssh_utils.empty_trash(basespace_access_token)
+        else:
+            logging_statement(f"No need to empty the trash on BaseSpace")
 
     ### Check on data in source_project to archive
     archive_timestamp = get_timestamp_previous_days(args.days_to_archive)
@@ -783,11 +800,18 @@ def main():
              run_ids_to_archive.append(x)
     ##################
     logging_statement(f"basespace_datasets_to_archive: {dataset_ids_to_archive}\n")
-    if args.dry_run is False:
-        ica_data_transfer.archive_data_basespace_managed(basespace_access_token,dataset_ids = dataset_ids_to_archive)
     logging_statement(f"basespace_runs_to_archive: {run_ids_to_archive}\n")
     if args.dry_run is False:
-        ica_data_transfer.archive_data_basespace_managed(basespace_access_token,run_ids = run_ids_to_archive)
+        if len(dataset_ids_to_archive) > 0:
+            dataset_archive_status = ica_data_transfer.archive_data_basespace_managed(basespace_access_token,dataset_ids = dataset_ids_to_archive)
+            pprint(f"dataset_archive_status: {dataset_archive_status}")
+        else:
+            logging_statement(f"No BaseSpace datasets to archive")
+        if len(run_ids_to_archive) > 0:
+            run_archive_status = ica_data_transfer.archive_data_basespace_managed(basespace_access_token,run_ids = run_ids_to_archive)
+            pprint(f"run_archive_status: {run_archive_status}")
+        else:
+            logging_statement(f"No BaseSpace runs to archive")
     logging_statement(f"Archiving data in {source_project_id} created {archive_timestamp} or earlier")
 
 
