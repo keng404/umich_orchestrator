@@ -11,3 +11,4 @@ RUN apt-get update -y && \
 
 # copy scripts
 COPY *py ${WORKDIR}/
+COPY umich_orchestrator_wrapper.sh ${WORKDIR}/
