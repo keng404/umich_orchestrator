@@ -68,9 +68,9 @@ def mgi_or_not(foi):
     name_prefix = name_simplified.split('.')[0]
     name_prefix_split = name_prefix.split('-')
     ### matches on M-123-345*.fastq.gz
-    ### will not match on M_123_4325*.fastq.gz
+    ### will also match on M_123_4325*.fastq.gz
     # check if the FASTQ starts with an  'M'
-    if name_prefix_split[0] == "M":
+    if name_prefix_split[0] == "M" or re.search("^M",name_prefix[0]) is not None:
         is_mgi = True
     return is_mgi
 ### This function returns data found within first-level of analysis output
