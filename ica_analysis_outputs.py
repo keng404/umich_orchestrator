@@ -55,7 +55,7 @@ def get_projectdata_metadata(api_key,project_id,data_id):
             "path": projectdata_metadata.json()['data']['details']['path']})
         ##print(pprint(analysis_metadata,indent=4))
     except:
-        print(f"Could not get analyses outputs for project: {project_id} and analysis {analysis_id}")
+        print(f"Could not get analyses outputs for project: {project_id} and data {data_id}")
     return data_metadata_outputs   
 
 def get_children_data(api_key,project_id,data_id):
@@ -120,7 +120,10 @@ def get_full_analysis_output(api_key,project_id,analysis_id):
         #logging_statement(f"Writing analysis outputs to intermediate file data.json")
         #with open('data.json', 'w', encoding='utf-8') as file:
         #    json.dump(data_metadata,file, ensure_ascii=False, indent=4)
-        x.append(data_metadata[0])
+        if len(data_metadata) > 0:
+            x.append(data_metadata[0])
+        else:
+            logging_statement(f"Did not find metadata associated to this data {data_id} in this project {project_id}")
     if data_id is not None:
         children_metadata = get_children_data(api_key,project_id,data_id)
         for cm in children_metadata:

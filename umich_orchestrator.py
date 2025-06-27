@@ -533,7 +533,7 @@ def main():
 
                 ### Create FASTQ manifest file for MGI and upload to ICA
                 ### output file will be based on run_id
-                if args.dry_run is False:
+                if args.dry_run is False and len(list(data_to_link.keys())) > 0:
                     fastq_manifest_file = f"{run_id}.download_manifest.csv"
                     logging_statement(f"Creating FASTQ download manifest {fastq_manifest_file}")
                     with open(fastq_manifest_file, 'w') as f:
@@ -558,6 +558,8 @@ def main():
                         logging_statement(f"Adding analysis managed from {analyses_managed_table}")
                         #### format is analysis_id_managed,run_id
                         with open(analyses_managed_table, 'a+') as f:
+                            if run_id is None:
+                                run_id = "Unknown"
                             line_arr = [id,run_id]
                             new_str = ",".join(line_arr)
                             f.write(new_str + "\n")
@@ -570,6 +572,8 @@ def main():
                             new_str = ",".join(line_arr)
                             f.write(new_str + "\n")
                             
+                            if run_id is None:
+                                run_id = "Unknown"
                             line_arr = [id,run_id]
                             new_str = ",".join(line_arr)
                             f.write(new_str + "\n")
