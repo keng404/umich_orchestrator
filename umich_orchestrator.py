@@ -416,10 +416,11 @@ def main():
     logging_statement(f"Subsetting analyses_to_monitor and analyses_to_manage for {source_project_id}")
     desired_analyses_status_to_monitor = ["REQUESTED","INTIALIZED","INPROGRESS",'QUEUED', 'INITIALIZING', 'PREPARING_INPUTS', 'GENERATING_OUTPUTS']
     desired_analyses_status_to_manage = ["SUCCEEDED"]
+
     for aidx,project_analysis in enumerate(analyses_list):
-        if re.match('BCLConvert',project_analysis['pipeline']['code'],re.IGNORECASE) is not None and project_analysis['status'] in desired_analyses_status_to_monitor:
+        if (re.search('BCL',project_analysis['pipeline']['code'],re.IGNORECASE) is not None and re.search('Convert',project_analysis['pipeline']['code'],re.IGNORECASE) is not None) and project_analysis['status'] in desired_analyses_status_to_monitor:
             analysis_ids_of_interest.append(project_analysis['id'])
-        elif re.match('BCLConvert',project_analysis['pipeline']['code'],re.IGNORECASE) is not None and project_analysis['status'] in desired_analyses_status_to_manage:
+        elif (re.search('BCL',project_analysis['pipeline']['code'],re.IGNORECASE) is not None and re.search('Convert',project_analysis['pipeline']['code'],re.IGNORECASE) is not None) and project_analysis['status'] in desired_analyses_status_to_manage:
             analysis_ids_to_manage.append(project_analysis['id'])
 
     ###  STEP2: finialize analyses ids to monitor
