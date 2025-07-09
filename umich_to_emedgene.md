@@ -38,3 +38,10 @@ python umich_to_emedgene.py --api_key_file /opt/api_key.txt --source_project_nam
 				- ```project_id``` : project id of  project where the files  are located
 				- ```pipeline_urn``` : pipeline URN (Unified Resource Name). A long string that contains the pipeline name and pipeline id. Helps associate pipeline version to analysis data 
 			- this file is also uploaded to ICA in the source project ```--source_project_name``` you provide in the command line
+
+
+## Addtional notes
+
+The script functionality can be extended to more explicity handle Emedgene case submission via [CLI](https://help.emg.illumina.com/emedgene-analyze-manual/creating_multiple_cases/batch-case-upload-via-cli) or [API](https://help.emg.illumina.com/integrations/api-beginner-guide#api-reference).
+
+The key data structure ```case_file_metadata``` is a dictionary created for each DRAGEN analysis. The primary key is the ```sample id``` DRAGEN associates to an analysis file along with metadata (i.e. ICA path, ICA analysis id, pipeline id, etc.) that can be used to craft a batch case CSV --- see this [repository](https://github.com/keng404/emg_case_creation) for a demo of how this could work --- or API call to Emedgene to create a case.
