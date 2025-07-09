@@ -1,0 +1,14 @@
+.bam
+.cram
+hard-filtered.gvcf.gz
+sv.vcf.gz
+cnv.vcf.gz
+cnv_sv.vcf.gz
+repeats.vcf.gz
+mrjd.hard-filtered.vcf.gz
+targeted.vcf
+targeted.json
+roh.bed
+hard-filtered.baf.bw
+tn.bw
+target.counts.bw
