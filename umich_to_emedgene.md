@@ -37,7 +37,7 @@ python umich_to_emedgene.py --api_key_file /opt/api_key.txt --source_project_nam
 				- ```data_id``` : data id of the  file on ICA
 				- ```project_id``` : project id of  project where the files  are located
 				- ```pipeline_urn``` : pipeline URN (Unified Resource Name). A long string that contains the pipeline name and pipeline id. Helps associate pipeline version to analysis data 
-			- this file is also uploaded to ICA in the source project ```--source_project_name``` you provide in the command line
+			- this file is also uploaded to ICA in a folder named ```dragen_analysis_manifests``` in the source project ```--source_project_name``` you provide in the command line
 
 
 ## Addtional notes
