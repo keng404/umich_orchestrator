@@ -95,7 +95,7 @@ These are custom script(s) based on an end-user's use-case
 					- ```file_path``` : path of the FASTQ file on ICA
 					- ```data_id``` : data id of the FASTQ file on ICA
 					- ```project_id``` : project id of MGI project where the FASTQs are linked to
-				- this file is also uploaded to ICA in the MGI project ```--destination_project_name``` you provide in the command line
+				- this file is also uploaded to ICA in the MGI project in a folder named ```/fastq_manifests/``` using the value you provide to ```--destination_project_name``` you provide in the command line
 3) Check for data to delete
 	- Query analyses ran in the ```source_project_name``` ( this will be your BaseSpace managed project) that are older than 90 days --- this is configurable.
 	- For each of these analyses, look for a file named ```bsshoutput.json``` in the output. This file will identify by name which BaseSpace projects we want to focus on. 
