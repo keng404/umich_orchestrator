@@ -29,7 +29,7 @@ python umich_to_emedgene.py --api_key_file /opt/api_key.txt --source_project_nam
 		- ```run_id``` = folder name 		
 	- If analysis is not in the managed analysis table
 		- Identify analysis files generated and subset based on the file extensions listed in this [file](https://github.com/keng404/umich_orchestrator/blob/main/analyses_files_of_interest.txt) by default
-     	- create a ***dragen_analysis_manifest** file to store information so end-users can download data if needed. See [here](https://github.com/keng404/umich_orchestrator/blob/main/20250707_103905-c4c751ad-3846-4d9c-8611-3483cfd3f0ed.dragen_analysis_manifest.csv) for example 
+     	- create a **dragen_analysis_manifest** file to store information so end-users can download data if needed. See [here](https://github.com/keng404/umich_orchestrator/blob/main/20250707_103905-c4c751ad-3846-4d9c-8611-3483cfd3f0ed.dragen_analysis_manifest.csv) for example 
 			- file format of this CSV file is as follows ```sample_id,file_name,file_path,data_id,project_id,analysis_id,pipeline_urn```
 				- ```sample_id``` : sample id associated to the file
 				- ```file_name``` : name of the  file
