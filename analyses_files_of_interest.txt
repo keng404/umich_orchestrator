@@ -7,6 +7,7 @@ cnv_sv.vcf.gz
 repeats.vcf.gz
 mrjd.hard-filtered.vcf.gz
 targeted.vcf
+targeted.vcf.gz
 targeted.json
 roh.bed
 hard-filtered.baf.bw
