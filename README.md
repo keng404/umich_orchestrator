@@ -1,6 +1,8 @@
 # umich_orchestrator
 An orchestration approach to monitor analyses from Illumina Connected Analytics (ICA) and perform downstream activity for MGI use
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/keng404/umich_orchestrator)
+
 ## installation instructions
 1) Run locally 
 - use ```git clone``` or copy ZIP file and extract contents to desired directory
